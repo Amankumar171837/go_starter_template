@@ -59,6 +59,7 @@ func getEnvSlice(key string, defaultValue []string) []string {
 type Config struct {
 	Database DatabaseConfig
 	Server   ServerConfig
+	JWT      JWTConfig
 }
 
 type DatabaseConfig struct {
@@ -74,6 +75,12 @@ type ServerConfig struct {
 	Port           string
 	Host           string
 	AllowedOrigins []string
+}
+
+type JWTConfig struct {
+    SecretKey       string
+    AccessExpiry  time.Duration
+    RefreshExpiry time.Duration
 }
 
 func Load() (*Config, error) {
@@ -95,6 +102,11 @@ func Load() (*Config, error) {
 			Port:           getEnv("SERVER_PORT", "8080"),
 			Host:           getEnv("SERVER_HOST", "localhost"),
 			AllowedOrigins: getEnvSlice("ALLOWED_ORIGINS", []string{}),
+		},
+		JWT: JWTConfig{
+			SecretKey: getEnv("JWT_SECRET_KEY",""),
+			AccessExpiry:  getEnvDuration("JWT_ACCESS_EXPIRY", 5*time.Minute),
+			RefreshExpiry: getEnvDuration("JWT_REFRESH_EXPIRY", 168*time.Hour),
 		},
 	}
 
