@@ -15,3 +15,11 @@ func NewUserService(repo domain.UserRepository) domain.UserService {
 func (s *userService) GetUsers() ([]domain.User, error) {
 	return s.repo.GetAll()
 }
+
+func (s *userService) GetUserByEmail(email string) (*domain.User, error) {
+	return s.repo.FindByEmail(email)
+}
+
+func (s *userService) CreateUser(user *domain.User) error {
+	return s.repo.Create(user)
+}

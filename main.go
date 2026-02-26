@@ -3,10 +3,13 @@ package main
 import (
 	"log"
 
-	"github.com/gin-gonic/gin"
 	"go_starter_template/internal/config"
-	"go_starter_template/internal/repository/postgres"
+	"go_starter_template/internal/handler"
 	"go_starter_template/internal/middleware"
+	"go_starter_template/internal/repository/postgres"
+	"go_starter_template/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -26,6 +29,18 @@ func main() {
 
 	log.Println("connected to database")
 
+	// Dependencies
+	userRepo := postgres.NewUserRepository(db)
+	userService := service.NewUserService(userRepo)
+	userHandler := handler.NewUserHandler(userService)
+
+	postRepo := postgres.NewPostRepository(db)
+	postService := service.NewPostService(postRepo)
+	postHandler := handler.NewPostHandler(postService)
+
+	authService := service.NewAuthService(userRepo, cfg)
+	authHandler := handler.NewAuthHandler(authService)
+
 	// Server setup
 
 	gin.SetMode(gin.ReleaseMode) // Production mode (less verbose logging)
@@ -34,8 +49,8 @@ func main() {
 
 	// Middleware
 
-	r.Use(gin.Recovery())                             // Catches panics and returns 500 instead of crashing
-	r.Use(middleware.Logger())                        // Logs each request (method, path, status, duration)
+	r.Use(gin.Recovery())      // Catches panics and returns 500 instead of crashing
+	r.Use(middleware.Logger()) // Logs each request (method, path, status, duration)
 
 	r.GET("/health", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
@@ -44,13 +59,33 @@ func main() {
 	})
 	api := r.Group("/api/v2")
 	{
-		pubic := api.Group("/public")
+		public := api.Group("/public")
 		{
-			pubic.GET("/ping", func(ctx *gin.Context) {
+			public.GET("/ping", func(ctx *gin.Context) {
 				ctx.JSON(200, gin.H{
 					"ping": "pong",
 				})
 			})
+
+			public.GET("/users",userHandler.GetUsers)
+		}
+
+		identity := api.Group(("/identity"))
+		{
+			identity.POST("/users/new", authHandler.Register)
+			identity.POST("/sessions", authHandler.Login)
+			identity.POST("/sessions/refresh", authHandler.Refresh)
+		}
+
+		// Private Routes (Protected by JWT)
+		private := api.Group("/resource")
+		private.Use(middleware.AuthMiddleware(cfg))
+		{
+			private.POST("/posts", postHandler.CreatePost)
+			private.GET("/posts", postHandler.GetPosts)
+			private.GET("/posts/:id", postHandler.GetPost)
+			private.PUT("/posts/:id", postHandler.UpdatePost)
+			private.DELETE("/posts/:id", postHandler.DeletePost)
 		}
 	}
 

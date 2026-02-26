@@ -13,7 +13,6 @@ type User struct {
 	Username        string                 `json:"username" gorm:"unique"`
 	FirstName       string                 `json:"first_name,omitempty"`
 	LastName        string                 `json:"last_name,omitempty"`
-	Verified        bool                   `json:"verified" gorm:"default:false"`
 	Role            string                 `json:"role" gorm:"default:member"`
 	Platform        string                 `json:"platform" gorm:"default:app"`
 	State           string                 `json:"state" gorm:"pending"`
@@ -25,8 +24,12 @@ type User struct {
 
 type UserRepository interface {
 	GetAll() ([]User, error)
+	FindByEmail(email string) (*User, error)
+	Create(user *User) error
 }
 
 type UserService interface {
 	GetUsers() ([]User, error)
+	GetUserByEmail(email string) (*User, error)
+	CreateUser(user *User) error
 }
